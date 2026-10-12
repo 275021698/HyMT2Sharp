@@ -130,7 +130,8 @@ static void WriteDelta(HunyuanDenseModel model, List<int> generated, ref string 
 {
     if (Console.IsOutputRedirected)
         return;
-    string next = model.Tokenizer.DecodeVisible(generated);
+    // A trailing U+FFFD is a UTF-8 sequence split across tokens; hold it until it completes.
+    string next = model.Tokenizer.DecodeVisible(generated).TrimEnd('\uFFFD');
     if (next.Length > visible.Length && next.StartsWith(visible, StringComparison.Ordinal))
         Console.Write(next[visible.Length..]);
     else if (next != visible)

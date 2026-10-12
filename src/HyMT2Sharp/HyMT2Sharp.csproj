@@ -1,7 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Hy-MT2 hunyuan-dense inference: GGUF, tokenize, KV cache, CPU (SIMD), Metal and Vulkan backends.</Description>
+    <PackageTags>$(PackageTags);linqpad-samples</PackageTags>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="linqpad-samples\*.linq" Pack="true" PackagePath="linqpad-samples" />
+  </ItemGroup>
   <ItemGroup>
     <!-- SPIR-V binaries are committed next to the .comp sources; regenerate with
          src/HyMT2Sharp/Backends/Vulkan/tools/build-shaders.bat (glslc, dev-time only). -->

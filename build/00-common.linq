@@ -21,12 +21,10 @@ static void NuGetRun(string args) => Run(@".\nuget.exe", args, Encoding.GetEncod
 static void DotNetRun(string args) => Run("dotnet", args.Dump(), Encoding.GetEncoding("utf-8"));
 static void Run(string exe, string args, Encoding encoding) => Util.Cmd(exe, args, encoding);
 
-// Independent package versions. Keep Directory.Build.props defaults in sync.
-// Do not pack with -p:Version=; pack passes these properties instead so a newer
-// Model package can still depend on an older Gguf / Kernels package.
+// Package versions. Keep Directory.Build.props defaults in sync.
 static ProjectVersion[] Projects =
 {
-	new("HyMT2Sharp", "1.0.0"),
+	new("HyMT2Sharp", "2.0.0"),
 };
 
 static string VersionPropertyName(string projectName) => projectName.Replace(".", "") + "Version";

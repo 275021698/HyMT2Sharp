@@ -1,10 +1,7 @@
 <Project>
-  <!--
-    Independent NuGet versions. Edit here (and keep build/00-common.linq in sync).
-    `dotnet pack -p:Version=` must not flow into referenced projects; see Directory.Build.targets.
-  -->
+  <!-- NuGet version of Sdcb.HyMT2Sharp. Keep build/00-common.linq in sync. -->
   <PropertyGroup>
-    <HyMT2SharpVersion Condition="'$(HyMT2SharpVersion)' == ''">1.0.0</HyMT2SharpVersion>
+    <HyMT2SharpVersion Condition="'$(HyMT2SharpVersion)' == ''">2.0.0</HyMT2SharpVersion>
   </PropertyGroup>
 
   <PropertyGroup>

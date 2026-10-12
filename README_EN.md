@@ -49,7 +49,7 @@ curl http://127.0.0.1:8080/v1/chat/completions -H "Content-Type: application/jso
 
 ## Use as a library
 
-Install the inference package (Gguf / Kernels / backends are merged into a single assembly):
+Install the inference package:
 
 ```powershell
 dotnet add package Sdcb.HyMT2Sharp
@@ -87,10 +87,13 @@ static async IAsyncEnumerable<string> Generate(
             break;
 
         generated.Add(token);
-        string next = model.Tokenizer.DecodeVisible(generated);
+        // A trailing U+FFFD is a UTF-8 sequence split across tokens; wait for the next token.
+        string next = model.Tokenizer.DecodeVisible(generated).TrimEnd('\uFFFD');
         if (next.Length > visible.Length && next.StartsWith(visible, StringComparison.Ordinal))
+        {
             yield return next[visible.Length..];
-        visible = next;
+            visible = next;
+        }
 
         logits = model.Forward([token]);
         await Task.Yield();
@@ -116,6 +119,8 @@ static int ArgMax(float[] logits)
 | `Sdcb.HyMT2Sharp` | [![NuGet](https://img.shields.io/nuget/v/Sdcb.HyMT2Sharp.svg)](https://www.nuget.org/packages/Sdcb.HyMT2Sharp) | Single dll: GGUF, tokenizer, KV cache, CPU SIMD kernels, `Forward` |
 
 `HyMT2Sharp.Cli`, `HyMT2Sharp.Server`, and `HyMT2Sharp.Benchmark` live in this repo as samples and tooling. They are not published to NuGet.
+
+`Sdcb.HyMT2Sharp` also ships 3 LINQPad scripts, all referencing the `Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit` weight package: `hello-world` (one translation; switch between the model card's prompt types by uncommenting), `cli` (interactive translator; `/to <language>` switches the target), and `minimal-api` (ASP.NET Core minimal API with `POST /translate` and streaming `GET /translate/stream`). The package is tagged `linqpad-samples`, so the free edition can use them.
 
 ## Performance
 

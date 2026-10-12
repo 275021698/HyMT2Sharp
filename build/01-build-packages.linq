@@ -47,8 +47,6 @@ void Build(ProjectVersion p)
 {
 	QueryCancelToken.ThrowIfCancellationRequested();
 	string projPosition = FindProjectPath(p.name);
-	// Do not pass -p:Version=; it is global and NuGet would copy it onto ProjectReference
-	// dependencies. Each project's version comes from AllVersionMsBuildArgs() via Directory.Build.props.
 	DotNetRun($@"pack ""{projPosition}"" -c Release -o .\nupkgs {AllVersionMsBuildArgs()}");
 	Refresh();
 }

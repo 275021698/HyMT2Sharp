@@ -49,7 +49,7 @@ curl http://127.0.0.1:8080/v1/chat/completions -H "Content-Type: application/jso
 
 ## 作为库使用
 
-安装推理包（Gguf / Kernels / 后端已合并为单一程序集）：
+安装推理包：
 
 ```powershell
 dotnet add package Sdcb.HyMT2Sharp
@@ -87,10 +87,13 @@ static async IAsyncEnumerable<string> Generate(
             break;
 
         generated.Add(token);
-        string next = model.Tokenizer.DecodeVisible(generated);
+        // A trailing U+FFFD is a UTF-8 sequence split across tokens; wait for the next token.
+        string next = model.Tokenizer.DecodeVisible(generated).TrimEnd('\uFFFD');
         if (next.Length > visible.Length && next.StartsWith(visible, StringComparison.Ordinal))
+        {
             yield return next[visible.Length..];
-        visible = next;
+            visible = next;
+        }
 
         logits = model.Forward([token]);
         await Task.Yield();
@@ -113,9 +116,11 @@ static int ArgMax(float[] logits)
 
 | 包 | 版本 | 说明 |
 | --- | --- | --- |
-| `Sdcb.HyMT2Sharp` | [![NuGet](https://img.shields.io/nuget/v/Sdcb.HyMT2Sharp.svg)](https://www.nuget.org/packages/Sdcb.HyMT2Sharp) | 单 dll:GGUF、分词、KV cache、CPU SIMD kernel、`Forward`(Gguf/Kernels 已并入) |
+| `Sdcb.HyMT2Sharp` | [![NuGet](https://img.shields.io/nuget/v/Sdcb.HyMT2Sharp.svg)](https://www.nuget.org/packages/Sdcb.HyMT2Sharp) | 单 dll:GGUF、分词、KV cache、CPU SIMD kernel、`Forward` |
 
 `HyMT2Sharp.Cli`、`HyMT2Sharp.Server`、`HyMT2Sharp.Benchmark` 是仓库内的示例与基准工具，不发布 NuGet。
+
+`Sdcb.HyMT2Sharp` 还带 3 个 LINQPad 脚本，都引用 `Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit` 权重包：`hello-world`（单次翻译，注释里可切换模型卡上的各类 prompt）、`cli`（交互式翻译，`/to <语言>` 切换目标语言）、`minimal-api`（ASP.NET Core minimal API，`POST /translate` 与流式 `GET /translate/stream`）。包打了 `linqpad-samples` 标签，免费版也能用。
 
 ## 性能
 

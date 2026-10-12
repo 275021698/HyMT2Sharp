@@ -238,7 +238,8 @@ public sealed class ChatCompletionService : IDisposable
 
     private static List<string> DrainDeltas(HunyuanDenseModel model, List<int> generated, ref string visible)
     {
-        string next = model.Tokenizer.DecodeVisible(generated);
+        // A trailing U+FFFD is a UTF-8 sequence split across tokens; hold it until it completes.
+        string next = model.Tokenizer.DecodeVisible(generated).TrimEnd('\uFFFD');
         List<string> deltas = [];
         if (next.Length > visible.Length && next.StartsWith(visible, StringComparison.Ordinal))
         {
