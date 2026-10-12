@@ -176,7 +176,7 @@ dotnet run --project src/HyMT2Sharp.Cli -c Release -- --model "D:\_\model\Hy-MT2
 
 ## WeChat group
 
-![](https://io.starworks.cc:88/cv-public/2026/ocr-wxg-qr.png)
+![](https://io.starworks.cc:88/cv-public/2026/ocr-wxg-qr.png?1012)
 
 If the WeChat QR code has expired, join the QQ group [.NET骚操作 495782587](https://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=&authKey=&noverify=0&group_code=495782587).
 
