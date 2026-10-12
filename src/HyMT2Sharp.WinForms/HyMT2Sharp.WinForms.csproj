@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationDefaultFont>Microsoft YaHei UI, 9pt</ApplicationDefaultFont>
+    <ApplicationVisualStyles>true</ApplicationVisualStyles>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\HyMT2Sharp\HyMT2Sharp.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Swap this package (and the using in MainForm.cs) to use another quantization. -->
+    <PackageReference Include="Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit" Version="1.0.0" />
+  </ItemGroup>
+</Project>

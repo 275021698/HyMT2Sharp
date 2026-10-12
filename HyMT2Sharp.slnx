@@ -3,5 +3,6 @@
   <Project Path="src/HyMT2Sharp.Cli/HyMT2Sharp.Cli.csproj" />
   <Project Path="src/HyMT2Sharp/HyMT2Sharp.csproj" />
   <Project Path="src/HyMT2Sharp.Server/HyMT2Sharp.Server.csproj" />
+  <Project Path="src/HyMT2Sharp.WinForms/HyMT2Sharp.WinForms.csproj" />
   <Project Path="tests/HyMT2Sharp.Tests/HyMT2Sharp.Tests.csproj" />
 </Solution>

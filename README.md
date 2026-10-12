@@ -47,6 +47,14 @@ dotnet run --project src/HyMT2Sharp.Server -c Release
 curl http://127.0.0.1:8080/v1/chat/completions -H "Content-Type: application/json" -d "{\"messages\":[{\"role\":\"user\",\"content\":\"Translate the following segment into Chinese, without additional explanation：SimdPaddleOCR is officially released today (NuGet: Sdcb.SimdPaddleOCR). It is a complete OCR inference engine written entirely in C#. It does not depend on Paddle Inference or ONNX Runtime, and it does not require shipping OpenCV native libraries.\"}],\"max_tokens\":128}"
 ```
 
+### WinForms 示例（Windows）
+
+`HyMT2Sharp.WinForms` 是一个桌面翻译窗口：左边输入、右边流式输出，可选引擎（自动 / CPU / Vulkan）和目标语言，底部状态栏显示加载时间与 prefill / decode 速度。权重固定用 2Bit 包，换量化请改 csproj 里的权重包引用。支持高 DPI（PerMonitorV2）。
+
+```powershell
+dotnet run --project src/HyMT2Sharp.WinForms -c Release
+```
+
 ## 作为库使用
 
 安装推理包：
@@ -115,7 +123,7 @@ static async IAsyncEnumerable<string> Generate(
 | --- | --- | --- |
 | `Sdcb.HyMT2Sharp` | [![NuGet](https://img.shields.io/nuget/v/Sdcb.HyMT2Sharp.svg)](https://www.nuget.org/packages/Sdcb.HyMT2Sharp) | 单 dll:GGUF、分词、KV cache、CPU SIMD kernel、Vulkan / Metal 后端、`Forward` |
 
-`HyMT2Sharp.Cli`、`HyMT2Sharp.Server`、`HyMT2Sharp.Benchmark` 是仓库内的示例与基准工具，不发布 NuGet。
+`HyMT2Sharp.Cli`、`HyMT2Sharp.Server`、`HyMT2Sharp.WinForms`、`HyMT2Sharp.Benchmark` 是仓库内的示例与基准工具，不发布 NuGet。
 
 `Sdcb.HyMT2Sharp` 还带 3 个 LINQPad 脚本，都引用 `Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit` 权重包：`hello-world`（单次翻译，注释里可切换模型卡上的各类 prompt）、`cli`（交互式翻译，`/to <语言>` 切换目标语言）、`minimal-api`（ASP.NET Core minimal API，`POST /translate` 与流式 `GET /translate/stream`）。包打了 `linqpad-samples` 标签，免费版也能用。
 

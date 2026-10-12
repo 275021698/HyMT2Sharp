@@ -47,6 +47,14 @@ Open `http://127.0.0.1:8080`, or call it with curl:
 curl http://127.0.0.1:8080/v1/chat/completions -H "Content-Type: application/json" -d "{\"messages\":[{\"role\":\"user\",\"content\":\"Translate the following segment into Chinese, without additional explanation：SimdPaddleOCR is officially released today (NuGet: Sdcb.SimdPaddleOCR). It is a complete OCR inference engine written entirely in C#. It does not depend on Paddle Inference or ONNX Runtime, and it does not require shipping OpenCV native libraries.\"}],\"max_tokens\":128}"
 ```
 
+### WinForms sample (Windows)
+
+`HyMT2Sharp.WinForms` is a desktop translator: input on the left, streamed output on the right, a choice of engine (auto / CPU / Vulkan) and target language, and a status bar with load time and prefill / decode speed. It always uses the 2Bit weight package; swap the weight package reference in the csproj for another quantization. High DPI (PerMonitorV2) is supported.
+
+```powershell
+dotnet run --project src/HyMT2Sharp.WinForms -c Release
+```
+
 ## Use as a library
 
 Install the inference package:
@@ -115,7 +123,7 @@ static async IAsyncEnumerable<string> Generate(
 | --- | --- | --- |
 | `Sdcb.HyMT2Sharp` | [![NuGet](https://img.shields.io/nuget/v/Sdcb.HyMT2Sharp.svg)](https://www.nuget.org/packages/Sdcb.HyMT2Sharp) | Single dll: GGUF, tokenizer, KV cache, CPU SIMD kernels, Vulkan / Metal backends, `Forward` |
 
-`HyMT2Sharp.Cli`, `HyMT2Sharp.Server`, and `HyMT2Sharp.Benchmark` live in this repo as samples and tooling. They are not published to NuGet.
+`HyMT2Sharp.Cli`, `HyMT2Sharp.Server`, `HyMT2Sharp.WinForms`, and `HyMT2Sharp.Benchmark` live in this repo as samples and tooling. They are not published to NuGet.
 
 `Sdcb.HyMT2Sharp` also ships 3 LINQPad scripts, all referencing the `Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit` weight package: `hello-world` (one translation; switch between the model card's prompt types by uncommenting), `cli` (interactive translator; `/to <language>` switches the target), and `minimal-api` (ASP.NET Core minimal API with `POST /translate` and streaming `GET /translate/stream`). The package is tagged `linqpad-samples`, so the free edition can use them.
 
