@@ -34,14 +34,16 @@
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'HyMT2Sharp'">
     <Version>$(HyMT2SharpVersion)</Version>
     <IsPackable>true</IsPackable>
-    <Description>Hy-MT2 hunyuan-dense inference: GGUF, tokenize, KV cache, CPU (SIMD) and Metal backends.</Description>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(IsPackable)' == 'true'">
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
   </PropertyGroup>
   <ItemGroup Condition="'$(IsPackable)' == 'true'">
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="README.md" Visible="false" />
+    <!-- Tencent Hy emblem, cropped from the Hy-MT2 model card logo (imgs/logo-en.png). -->
+    <None Include="$(MSBuildThisFileDirectory)icon.png" Pack="true" PackagePath="icon.png" Visible="false" />
   </ItemGroup>
 </Project>
 

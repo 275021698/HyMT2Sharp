@@ -1,8 +1,8 @@
-# HyMT2Sharp [![NuGet](https://img.shields.io/nuget/v/Sdcb.HyMT2Sharp.svg)](https://www.nuget.org/packages/Sdcb.HyMT2Sharp) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE) [![QQ](https://img.shields.io/badge/QQ_Group-495782587-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=&authKey=&noverify=0&group_code=495782587)
+# HyMT2Sharp [![NuGet](https://img.shields.io/nuget/v/Sdcb.HyMT2Sharp.svg)](https://www.nuget.org/packages/Sdcb.HyMT2Sharp) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](https://github.com/sdcb/HyMT2Sharp/blob/main/LICENSE) [![QQ](https://img.shields.io/badge/QQ_Group-495782587-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=&authKey=&noverify=0&group_code=495782587)
 
-**中文** | [English](README_EN.md)
+**中文** | [English](https://github.com/sdcb/HyMT2Sharp/blob/main/README_EN.md)
 
-纯 C# 的 [Hy-MT2](https://huggingface.co/tencent/Hy-MT2-1.8B)（`hunyuan-dense`）**非官方** CPU 推理实现。不依赖 llama.cpp 或 ONNX Runtime，自带 AVX2 内核，面向进程内调用。
+纯 C# 的 [Hy-MT2](https://huggingface.co/tencent/Hy-MT2-1.8B)（`hunyuan-dense`）**非官方**推理实现。CPU 自带 AVX2 / AVX-512 / NEON SIMD 内核，另有 Vulkan 与 Metal GPU 后端；不依赖 llama.cpp 或 ONNX Runtime，面向进程内调用。
 
 当前验证过的 GGUF 量化：**Q8_0**、**Q6_K**、**Q4_K_M**、**Q2_0C**、**1.25-bit STQ1_0**。其它格式与模型规模尚未测试。
 
@@ -55,12 +55,16 @@ curl http://127.0.0.1:8080/v1/chat/completions -H "Content-Type: application/jso
 dotnet add package Sdcb.HyMT2Sharp
 ```
 
-`HunyuanDenseModel` 负责加载 GGUF、分词、KV cache 和 `Forward`。采样策略与文本拼接留给调用方——库内目前没有内置 `Generate` / `ArgMax`。下面是一个最小 greedy 流式示例：
+`HunyuanDenseModel` 负责加载 GGUF、分词、KV cache 和 `Forward`。库内提供 `Sampler`（`Sampler.ArgMax`，以及 temperature / top-p / top-k 等采样），但没有内置 `Generate`，文本拼接留给调用方。下面是一个最小 greedy 流式示例，权重来自 `Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit` 包（见[模型](#模型)）：
 
 ```csharp
+using System.Runtime.CompilerServices;
+using Sdcb.GgufWeights.Hy_MT2_1_8B_2Bit;
+using Sdcb.HyMT2Sharp.Backends;
 using Sdcb.HyMT2Sharp.Model;
 
-using HunyuanDenseModel model = new(@"D:\_\model\Hy-MT2-1.8B-1.25Bit.gguf");
+// 也可以直接传 GGUF 路径：new HunyuanDenseModel(@"D:\models\Hy-MT2-1.8B-Q4_K_M.gguf")
+using HunyuanDenseModel model = new(Weights.Model(), backend: BackendFactory.Create());
 
 await foreach (string piece in Generate(model, "Translate the following segment into Chinese, without additional explanation：SimdPaddleOCR is officially released today (NuGet: Sdcb.SimdPaddleOCR). It is a complete OCR inference engine written entirely in C#. It does not depend on Paddle Inference or ONNX Runtime, and it does not require shipping OpenCV native libraries."))
     Console.Write(piece);
@@ -82,7 +86,7 @@ static async IAsyncEnumerable<string> Generate(
     for (int i = 0; i < maxTokens; i++)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        int token = ArgMax(logits);
+        int token = Sampler.ArgMax(logits);
         if (model.Tokenizer.IsStop(token))
             break;
 
@@ -99,16 +103,9 @@ static async IAsyncEnumerable<string> Generate(
         await Task.Yield();
     }
 }
-
-static int ArgMax(float[] logits)
-{
-    int best = 0;
-    for (int i = 1; i < logits.Length; i++)
-        if (logits[i] > logits[best])
-            best = i;
-    return best;
-}
 ```
+
+`BackendFactory.Create()` 自动选择后端：macOS 优先 Metal，其次 Vulkan（需要系统装有 Vulkan 驱动），都不可用时返回 `null`，即纯 CPU。也可以传 `"cpu"` / `"vulkan"` / `"metal"` 指定，或设置环境变量 `HYMT_BACKEND`。CLI 用 `--backend` 选择，Server 自动选择。
 
 `threads = 0`（默认）自动绑物理 P-core，不占 SMT 和 E-core。`HunyuanDenseModel` 不是线程安全的，并发请求请串行化或各用独立实例。
 
@@ -116,7 +113,7 @@ static int ArgMax(float[] logits)
 
 | 包 | 版本 | 说明 |
 | --- | --- | --- |
-| `Sdcb.HyMT2Sharp` | [![NuGet](https://img.shields.io/nuget/v/Sdcb.HyMT2Sharp.svg)](https://www.nuget.org/packages/Sdcb.HyMT2Sharp) | 单 dll:GGUF、分词、KV cache、CPU SIMD kernel、`Forward` |
+| `Sdcb.HyMT2Sharp` | [![NuGet](https://img.shields.io/nuget/v/Sdcb.HyMT2Sharp.svg)](https://www.nuget.org/packages/Sdcb.HyMT2Sharp) | 单 dll:GGUF、分词、KV cache、CPU SIMD kernel、Vulkan / Metal 后端、`Forward` |
 
 `HyMT2Sharp.Cli`、`HyMT2Sharp.Server`、`HyMT2Sharp.Benchmark` 是仓库内的示例与基准工具，不发布 NuGet。
 
@@ -124,7 +121,7 @@ static int ArgMax(float[] logits)
 
 ## 性能
 
-测试环境：Ryzen 7 5800X（Zen 3）、Windows、Release、8 线程，`avx2=True`、`vnni=False`。不计模型加载与 warmup；prefill 为 512 token 三次平均，decode 为 512 token 上下文后连续生成 128 token。完整数据（五种量化、同窗口 llama.cpp 对照、跨机器对比与带宽分析）见 [docs/perf.md](docs/perf.md)。
+测试环境：Ryzen 7 5800X（Zen 3）、Windows、Release、8 线程，`avx2=True`、`vnni=False`。不计模型加载与 warmup；prefill 为 512 token 三次平均，decode 为 512 token 上下文后连续生成 128 token。完整数据（五种量化、同窗口 llama.cpp 对照、跨机器对比与带宽分析）见 [docs/perf.md](https://github.com/sdcb/HyMT2Sharp/blob/main/docs/perf.md)。
 
 | 模型 | prefill 512 | decode 128 | prefill 三次 |
 | --- | ---: | ---: | --- |
@@ -137,7 +134,7 @@ static int ArgMax(float[] logits)
 
 Q1.25 与 Q2 的 decode 基本持平；相比 Q4，Q1.25 prefill 快约 33%、decode 快约 80%。decode 全部贴着内存带宽墙，吞吐近似反比于权重大小。5800X 连续满载时频率与温度波动较大，上述数字不代表硬件上限。llama.cpp 加载不了 Q2_0C / STQ1_0，只能对照 K 系量化。
 
-另一台**开发机B**（hybrid CPU，8 P-core + 16 E-core，DDR4-3200，AVX-VNNI）上复测过 Q4 / Q6 / Q8：**prefill 约 4–6 倍于 llama.cpp**（Q6 463.7 vs 119.1、Q8 548.8 vs 93.0 tok/s）；decode 同样贴带宽墙。完整数据、带宽微基准与噪声说明见 [docs/perf-B.md](docs/perf-B.md)。
+另一台**开发机B**（hybrid CPU，8 P-core + 16 E-core，DDR4-3200，AVX-VNNI）上复测过 Q4 / Q6 / Q8：**prefill 约 4–6 倍于 llama.cpp**（Q6 463.7 vs 119.1、Q8 548.8 vs 93.0 tok/s）；decode 同样贴带宽墙。完整数据、带宽微基准与噪声说明见 [docs/perf-B.md](https://github.com/sdcb/HyMT2Sharp/blob/main/docs/perf-B.md)。
 
 复现：
 
@@ -158,7 +155,7 @@ Q2 panel 默认 64 KiB tile，可用 `--q2-col-tile-kb 64` 显式指定。`--pro
 - **Q2_0C**：8 列压缩 panel，保留 2-bit 权重，不展开为逐字节副本。
 - **STQ1_0**：42 B / 256 权重的 stride-16 block，加载时重排为 8 行 panel，prefill / decode 均走 AVX2 GEMV / GEMM。
 - **Q2 prefill**：QKV、gate/up、SiLU→down 复用 Q8 激活量化；2-bit 点积用 int32 归约避免 int16 溢出。
-- **Portable SIMD**：分发顺序 AVX-VNNI → AVX2 → `Vector<T>`。无 AVX2 的平台（ARM64/NEON、老 x64）自动落到 portable 档：decode 的 Q4_K/Q6_K 走奇偶 i16 激活 + u16 lane 拆位的 `DotAct`（Q4_K_M 已追平 AVX2 的带宽墙），其余格式走 `DotVec`；prefill 走 BLIS 式外积 float GEMM（`VecGemmF`，寄存器驻留 6×2V 累加器 + FMA）。此时跳过 panel repack，省 ~40% 权重内存。`HYMT2SHARP_FORCE_PORTABLE=1` 可强制启用验证，实测见 [docs/perf.md](docs/perf.md) 第 5 节。
+- **Portable SIMD**：分发顺序 AVX-VNNI → AVX2 → `Vector<T>`。无 AVX2 的平台（ARM64/NEON、老 x64）自动落到 portable 档：decode 的 Q4_K/Q6_K 走奇偶 i16 激活 + u16 lane 拆位的 `DotAct`（Q4_K_M 已追平 AVX2 的带宽墙），其余格式走 `DotVec`；prefill 走 BLIS 式外积 float GEMM（`VecGemmF`，寄存器驻留 6×2V 累加器 + FMA）。此时跳过 panel repack，省 ~40% 权重内存。`HYMT2SHARP_FORCE_PORTABLE=1` 可强制启用验证，实测见 [docs/perf.md](https://github.com/sdcb/HyMT2Sharp/blob/main/docs/perf.md) 第 5 节。
 - Q2 尾部列与非对齐 token 路径保留。
 
 ## 开发与测试
@@ -177,4 +174,4 @@ dotnet run --project src/HyMT2Sharp.Cli -c Release -- --model "D:\_\model\Hy-MT2
 
 ## 许可证
 
-[Apache License 2.0](LICENSE)
+[Apache License 2.0](https://github.com/sdcb/HyMT2Sharp/blob/main/LICENSE)

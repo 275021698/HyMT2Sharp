@@ -1,8 +1,8 @@
-# HyMT2Sharp [![NuGet](https://img.shields.io/nuget/v/Sdcb.HyMT2Sharp.svg)](https://www.nuget.org/packages/Sdcb.HyMT2Sharp) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE) [![QQ](https://img.shields.io/badge/QQ_Group-495782587-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=&authKey=&noverify=0&group_code=495782587)
+# HyMT2Sharp [![NuGet](https://img.shields.io/nuget/v/Sdcb.HyMT2Sharp.svg)](https://www.nuget.org/packages/Sdcb.HyMT2Sharp) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](https://github.com/sdcb/HyMT2Sharp/blob/main/LICENSE) [![QQ](https://img.shields.io/badge/QQ_Group-495782587-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=&authKey=&noverify=0&group_code=495782587)
 
-[中文](README.md) | **English**
+[中文](https://github.com/sdcb/HyMT2Sharp/blob/main/README.md) | **English**
 
-Unofficial pure C# CPU inference for [Hy-MT2](https://huggingface.co/tencent/Hy-MT2-1.8B) (`hunyuan-dense`). No llama.cpp or ONNX Runtime; AVX2 kernels are built in. Intended for in-process use.
+Unofficial pure C# inference for [Hy-MT2](https://huggingface.co/tencent/Hy-MT2-1.8B) (`hunyuan-dense`). Built-in AVX2 / AVX-512 / NEON SIMD kernels on CPU, plus Vulkan and Metal GPU backends. No llama.cpp or ONNX Runtime. Intended for in-process use.
 
 Validated GGUF quantizations: **Q8_0**, **Q6_K**, **Q4_K_M**, **Q2_0C**, and **1.25-bit STQ1_0**. Other formats and model sizes have not been tested.
 
@@ -55,12 +55,16 @@ Install the inference package:
 dotnet add package Sdcb.HyMT2Sharp
 ```
 
-`HunyuanDenseModel` loads the GGUF, tokenizes, owns the KV cache, and runs `Forward`. Sampling and string assembly are left to the caller — there is no built-in `Generate` / `ArgMax`. Minimal greedy streaming example:
+`HunyuanDenseModel` loads the GGUF, tokenizes, owns the KV cache, and runs `Forward`. The library ships `Sampler` (`Sampler.ArgMax` plus temperature / top-p / top-k sampling) but no built-in `Generate`; string assembly is left to the caller. Minimal greedy streaming example, with weights from the `Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit` package (see [Models](#models)):
 
 ```csharp
+using System.Runtime.CompilerServices;
+using Sdcb.GgufWeights.Hy_MT2_1_8B_2Bit;
+using Sdcb.HyMT2Sharp.Backends;
 using Sdcb.HyMT2Sharp.Model;
 
-using HunyuanDenseModel model = new(@"D:\_\model\Hy-MT2-1.8B-1.25Bit.gguf");
+// Or pass a GGUF path: new HunyuanDenseModel(@"D:\models\Hy-MT2-1.8B-Q4_K_M.gguf")
+using HunyuanDenseModel model = new(Weights.Model(), backend: BackendFactory.Create());
 
 await foreach (string piece in Generate(model, "Translate the following segment into Chinese, without additional explanation：SimdPaddleOCR is officially released today (NuGet: Sdcb.SimdPaddleOCR). It is a complete OCR inference engine written entirely in C#. It does not depend on Paddle Inference or ONNX Runtime, and it does not require shipping OpenCV native libraries."))
     Console.Write(piece);
@@ -82,7 +86,7 @@ static async IAsyncEnumerable<string> Generate(
     for (int i = 0; i < maxTokens; i++)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        int token = ArgMax(logits);
+        int token = Sampler.ArgMax(logits);
         if (model.Tokenizer.IsStop(token))
             break;
 
@@ -99,16 +103,9 @@ static async IAsyncEnumerable<string> Generate(
         await Task.Yield();
     }
 }
-
-static int ArgMax(float[] logits)
-{
-    int best = 0;
-    for (int i = 1; i < logits.Length; i++)
-        if (logits[i] > logits[best])
-            best = i;
-    return best;
-}
 ```
+
+`BackendFactory.Create()` picks a backend automatically: Metal first on macOS, then Vulkan (needs a Vulkan driver on the system); if neither is usable it returns `null`, meaning plain CPU. Pass `"cpu"` / `"vulkan"` / `"metal"` to force one, or set the `HYMT_BACKEND` environment variable. The CLI selects with `--backend`; the server picks automatically.
 
 `threads = 0` (the default) binds physical P-cores and skips SMT and E-cores. `HunyuanDenseModel` is not thread-safe; serialize requests or use one instance per caller.
 
@@ -116,7 +113,7 @@ static int ArgMax(float[] logits)
 
 | Package | Version | Notes |
 | --- | --- | --- |
-| `Sdcb.HyMT2Sharp` | [![NuGet](https://img.shields.io/nuget/v/Sdcb.HyMT2Sharp.svg)](https://www.nuget.org/packages/Sdcb.HyMT2Sharp) | Single dll: GGUF, tokenizer, KV cache, CPU SIMD kernels, `Forward` |
+| `Sdcb.HyMT2Sharp` | [![NuGet](https://img.shields.io/nuget/v/Sdcb.HyMT2Sharp.svg)](https://www.nuget.org/packages/Sdcb.HyMT2Sharp) | Single dll: GGUF, tokenizer, KV cache, CPU SIMD kernels, Vulkan / Metal backends, `Forward` |
 
 `HyMT2Sharp.Cli`, `HyMT2Sharp.Server`, and `HyMT2Sharp.Benchmark` live in this repo as samples and tooling. They are not published to NuGet.
 
@@ -124,7 +121,7 @@ static int ArgMax(float[] logits)
 
 ## Performance
 
-Environment: Ryzen 7 5800X (Zen 3), Windows, Release, 8 threads, `avx2=True`, `vnni=False`. Model load and warmup are excluded. Prefill is the mean of three 512-token runs. Decode is 128 tokens after a 512-token context. Full data (all five quantizations, same-window llama.cpp comparison, cross-machine numbers and bandwidth analysis): [docs/perf.md](docs/perf.md) (Chinese).
+Environment: Ryzen 7 5800X (Zen 3), Windows, Release, 8 threads, `avx2=True`, `vnni=False`. Model load and warmup are excluded. Prefill is the mean of three 512-token runs. Decode is 128 tokens after a 512-token context. Full data (all five quantizations, same-window llama.cpp comparison, cross-machine numbers and bandwidth analysis): [docs/perf.md](https://github.com/sdcb/HyMT2Sharp/blob/main/docs/perf.md) (Chinese).
 
 | Model | prefill 512 | decode 128 | prefill reps |
 | --- | ---: | ---: | --- |
@@ -137,7 +134,7 @@ Environment: Ryzen 7 5800X (Zen 3), Windows, Release, 8 threads, `avx2=True`, `v
 
 Q1.25 and Q2 decode at about the same rate. Versus Q4, Q1.25 prefill is ~33% faster and decode ~80% faster. Decode sits at the memory-bandwidth wall, so throughput falls off almost exactly in inverse proportion to weight size. A 5800X under sustained load will wander with clocks and temperature; these numbers are not a hardware ceiling. llama.cpp cannot load Q2_0C / STQ1_0, so only the K-quants can be compared.
 
-A second box (**dev machine B**: hybrid CPU, 8 P-cores + 16 E-cores, DDR4-3200, AVX-VNNI) re-measured Q4 / Q6 / Q8 against CPU-only llama.cpp in the same window: **prefill is ~4–6× llama.cpp** (Q6 463.7 vs 119.1, Q8 548.8 vs 93.0 tok/s); decode sits at the same bandwidth wall. Full data, bandwidth microbenchmarks, and noise caveats: [docs/perf-B.md](docs/perf-B.md) (Chinese).
+A second box (**dev machine B**: hybrid CPU, 8 P-cores + 16 E-cores, DDR4-3200, AVX-VNNI) re-measured Q4 / Q6 / Q8 against CPU-only llama.cpp in the same window: **prefill is ~4–6× llama.cpp** (Q6 463.7 vs 119.1, Q8 548.8 vs 93.0 tok/s); decode sits at the same bandwidth wall. Full data, bandwidth microbenchmarks, and noise caveats: [docs/perf-B.md](https://github.com/sdcb/HyMT2Sharp/blob/main/docs/perf-B.md) (Chinese).
 
 Reproduce:
 
@@ -158,7 +155,7 @@ Q2 panels default to a 64 KiB tile (`--q2-col-tile-kb 64`). `--profile` prints S
 - **Q2_0C**: compressed 8-column panels; 2-bit weights stay packed (no per-weight byte expansion).
 - **STQ1_0**: 42 B / 256-weight stride-16 blocks, repacked to 8-row panels; prefill and decode both use AVX2 GEMV / GEMM.
 - **Q2 prefill**: QKV, gate/up, and SiLU→down reuse Q8 activation quant; 2-bit dots reduce in int32 to avoid int16 overflow.
-- **Portable SIMD**: dispatch order is AVX-VNNI → AVX2 → `Vector<T>`. Platforms without AVX2 (ARM64/NEON, older x64) fall to the portable tier automatically: Q4_K/Q6_K decode runs `DotAct` (even/odd i16 activations, weights split from u16 lanes; Q4_K_M reaches the same bandwidth wall as AVX2), other formats run `DotVec`; prefill runs a BLIS-style outer-product float GEMM (`VecGemmF`, 6×2V register-resident accumulators with FMA). Panel repack is skipped in this mode, saving ~40% weight memory. `HYMT2SHARP_FORCE_PORTABLE=1` forces it for verification; measured numbers are in [docs/perf.md](docs/perf.md) section 5.
+- **Portable SIMD**: dispatch order is AVX-VNNI → AVX2 → `Vector<T>`. Platforms without AVX2 (ARM64/NEON, older x64) fall to the portable tier automatically: Q4_K/Q6_K decode runs `DotAct` (even/odd i16 activations, weights split from u16 lanes; Q4_K_M reaches the same bandwidth wall as AVX2), other formats run `DotVec`; prefill runs a BLIS-style outer-product float GEMM (`VecGemmF`, 6×2V register-resident accumulators with FMA). Panel repack is skipped in this mode, saving ~40% weight memory. `HYMT2SHARP_FORCE_PORTABLE=1` forces it for verification; measured numbers are in [docs/perf.md](https://github.com/sdcb/HyMT2Sharp/blob/main/docs/perf.md) section 5.
 - Q2 tail columns and non-aligned token paths remain.
 
 ## Development
@@ -177,4 +174,4 @@ If the WeChat QR code has expired, join the QQ group [.NET骚操作 495782587](h
 
 ## License
 
-[Apache License 2.0](LICENSE)
+[Apache License 2.0](https://github.com/sdcb/HyMT2Sharp/blob/main/LICENSE)
