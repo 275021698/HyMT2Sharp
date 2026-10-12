@@ -20,9 +20,10 @@
 
 ## 快速开始
 
-从仓库直接运行 CLI（把 `--model` 换成你的 GGUF 路径）：
+从仓库直接运行 CLI。CLI 和 Server 默认引用 NuGet 包 `Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit`，不传 `--model` 即加载内置的 2Bit 权重；也可以用 `--model` 指定自己的 GGUF 文件：
 
 ```powershell
+dotnet run --project src/HyMT2Sharp.Cli -c Release
 dotnet run --project src/HyMT2Sharp.Cli -c Release -- --model "D:\_\model\Hy-MT2-1.8B-Q4_K_M.gguf"
 ```
 
@@ -33,8 +34,10 @@ dotnet run --project src/HyMT2Sharp.Cli -c Release -- --model "D:\_\model\Hy-MT2
 `HyMT2Sharp.Server` 提供 OpenAI 兼容的 `POST /v1/chat/completions`（含 SSE 流式）和内置聊天页：
 
 ```powershell
-dotnet run --project src/HyMT2Sharp.Server -c Release -- --model "D:\_\model\Hy-MT2-1.8B-Q4_K_M.gguf"
+dotnet run --project src/HyMT2Sharp.Server -c Release
 ```
+
+同样可用 `--model`（或环境变量 `HYMT2_MODEL`）指定 GGUF 文件。
 
 浏览器访问 `http://127.0.0.1:8080`，或用 curl：
 

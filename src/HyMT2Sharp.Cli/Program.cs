@@ -1,9 +1,10 @@
 using System.Diagnostics;
 using System.Text;
 using Sdcb.HyMT2Sharp.Model;
+using EmbeddedWeights = Sdcb.GgufWeights.Hy_MT2_1_8B_2Bit.Weights;
 
-string modelPath = Args.Get(args, "--model")
-    ?? @"D:\_\model\Hy-MT2-1.8B-Q4_K_M.gguf";
+// Without --model, load the bundled Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit package.
+string? modelPath = Args.Get(args, "--model");
 string? prompt = Args.Get(args, "--prompt");
 string? system = Args.Get(args, "--system");
 int maxTokens = Args.GetInt(args, "--max-tokens", 256);
@@ -11,7 +12,7 @@ int threads = Args.GetInt(args, "--threads", 0);
 Console.OutputEncoding = Encoding.UTF8;
 Console.InputEncoding = Encoding.UTF8;
 
-Console.WriteLine($"HyMT2Sharp  model={modelPath}");
+Console.WriteLine($"HyMT2Sharp  model={modelPath ?? $"{EmbeddedWeights.ModelId} (embedded)"}");
 Console.WriteLine($"threads={(threads <= 0 ? "auto" : threads.ToString())}  avx2={System.Runtime.Intrinsics.X86.Avx2.IsSupported}  vnni={System.Runtime.Intrinsics.X86.AvxVnni.IsSupported}");
 
 IComputeBackend? backend = null;
@@ -21,7 +22,9 @@ catch (Exception e) { Console.WriteLine($"backend {backendName} unavailable ({e.
 if (backend is not null)
     Console.WriteLine($"backend={backend.Name}");
 
-using HunyuanDenseModel model = new(modelPath, threads, backend: backend);
+using HunyuanDenseModel model = modelPath is null
+    ? new(EmbeddedWeights.Model(), threads, backend: backend)
+    : new(modelPath, threads, backend: backend);
 Console.WriteLine($"threads={model.ThreadCount}{(threads <= 0 ? $" ({model.ThreadAutoHint})" : "")}  arch={model.Config.Architecture} layers={model.Config.NumLayers} hidden={model.Config.HiddenSize} heads={model.Config.NumHeads}/{model.Config.NumKvHeads} vocab={model.Config.VocabSize}");
 
 List<ChatMessage> messages = [];

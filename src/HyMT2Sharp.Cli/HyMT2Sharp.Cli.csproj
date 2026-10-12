@@ -5,4 +5,7 @@
   <ItemGroup>
     <ProjectReference Include="..\HyMT2Sharp\HyMT2Sharp.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit" Version="1.0.0" />
+  </ItemGroup>
 </Project>

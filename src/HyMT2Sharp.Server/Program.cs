@@ -5,9 +5,9 @@ using System.Text.Json.Serialization;
 using Sdcb.HyMT2Sharp.Model;
 using Sdcb.HyMT2Sharp.Server;
 
-string modelPath = GetArg(args, "--model", "-m")
-    ?? Environment.GetEnvironmentVariable("HYMT2_MODEL")
-    ?? @"D:\_\model\Hy-MT2-1.8B-2Bit.gguf";
+// Null means the bundled Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit package.
+string? modelPath = GetArg(args, "--model", "-m")
+    ?? Environment.GetEnvironmentVariable("HYMT2_MODEL");
 int threads = GetInt(args, 0, "--threads", "-t");
 int maxTokens = GetInt(args, 256, "--max-tokens");
 // Stateless translation serving defaults to no cross-request cache; "blocks"
@@ -31,7 +31,7 @@ string urls = GetArg(args, "--urls")
     ?? "http://127.0.0.1:8080";
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
-Console.WriteLine($"HyMT2Sharp.Server  model={modelPath}");
+Console.WriteLine($"HyMT2Sharp.Server  model={modelPath ?? "(embedded)"}");
 Console.WriteLine($"threads={(threads <= 0 ? "auto" : threads.ToString())}  avx2={Avx2.IsSupported}  vnni={AvxVnni.IsSupported}");
 
 JsonSerializerOptions json = new(JsonSerializerOptions.Web);

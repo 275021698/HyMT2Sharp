@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sdcb.HyMT2Sharp.Model;
+using EmbeddedWeights = Sdcb.GgufWeights.Hy_MT2_1_8B_2Bit.Weights;
 
 namespace Sdcb.HyMT2Sharp.Server;
 
@@ -10,13 +11,22 @@ public sealed class ChatCompletionService : IDisposable
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly int _defaultMaxTokens;
 
-    public ChatCompletionService(string modelPath, int threads, int defaultMaxTokens = 256, KvCacheConfig? cacheConfig = null)
+    /// <param name="modelPath">GGUF file path; null loads the bundled Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit package.</param>
+    public ChatCompletionService(string? modelPath, int threads, int defaultMaxTokens = 256, KvCacheConfig? cacheConfig = null)
     {
-        if (!File.Exists(modelPath))
-            throw new FileNotFoundException($"Model not found: {modelPath}", modelPath);
+        if (modelPath is null)
+        {
+            ModelPath = "embedded:Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit";
+            ModelId = EmbeddedWeights.ModelId;
+        }
+        else
+        {
+            if (!File.Exists(modelPath))
+                throw new FileNotFoundException($"Model not found: {modelPath}", modelPath);
+            ModelPath = Path.GetFullPath(modelPath);
+            ModelId = Path.GetFileNameWithoutExtension(ModelPath);
+        }
 
-        ModelPath = Path.GetFullPath(modelPath);
-        ModelId = Path.GetFileNameWithoutExtension(ModelPath);
         _defaultMaxTokens = defaultMaxTokens > 0 ? defaultMaxTokens : 256;
         CreatedUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
@@ -24,7 +34,9 @@ public sealed class ChatCompletionService : IDisposable
         try { backend = Backends.BackendFactory.Create(); }
         catch (Exception e) { Console.WriteLine($"backend init failed ({e.Message}) — using cpu"); }
         Console.WriteLine($"loading {ModelPath}  backend={backend?.Name ?? "cpu"}");
-        _model = new HunyuanDenseModel(ModelPath, threads, cacheConfig, backend);
+        _model = modelPath is null
+            ? new HunyuanDenseModel(EmbeddedWeights.Model(), threads, cacheConfig, backend)
+            : new HunyuanDenseModel(ModelPath, threads, cacheConfig, backend);
         Console.WriteLine($"ready  threads={_model.ThreadCount}{(threads <= 0 ? $" ({_model.ThreadAutoHint})" : "")}  kv-cache={_model.CacheConfig.PolicyName}  arch={_model.Config.Architecture} layers={_model.Config.NumLayers} hidden={_model.Config.HiddenSize} heads={_model.Config.NumHeads}/{_model.Config.NumKvHeads} vocab={_model.Config.VocabSize}");
     }
 

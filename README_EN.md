@@ -20,9 +20,10 @@ Weights are not shipped in the NuGet packages. Download a GGUF yourself:
 
 ## Quick start
 
-Run the CLI from this repo (point `--model` at your GGUF):
+Run the CLI from this repo. The CLI and server reference the NuGet package `Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit` and load those embedded 2Bit weights when `--model` is omitted; pass `--model` to use your own GGUF:
 
 ```powershell
+dotnet run --project src/HyMT2Sharp.Cli -c Release
 dotnet run --project src/HyMT2Sharp.Cli -c Release -- --model "D:\_\model\Hy-MT2-1.8B-Q4_K_M.gguf"
 ```
 
@@ -33,8 +34,10 @@ Omit `--threads` to bind physical P-cores from the CPU topology (8 threads on an
 `HyMT2Sharp.Server` exposes OpenAI-compatible `POST /v1/chat/completions` (including SSE) and a built-in chat page:
 
 ```powershell
-dotnet run --project src/HyMT2Sharp.Server -c Release -- --model "D:\_\model\Hy-MT2-1.8B-Q4_K_M.gguf"
+dotnet run --project src/HyMT2Sharp.Server -c Release
 ```
+
+`--model` (or the `HYMT2_MODEL` environment variable) selects a GGUF file instead.
 
 Open `http://127.0.0.1:8080`, or call it with curl:
 
