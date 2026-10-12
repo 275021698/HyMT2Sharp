@@ -8,15 +8,17 @@
 
 ## 模型
 
-权重需自行下载（NuGet 包不含 GGUF）：
+推理包 `Sdcb.HyMT2Sharp` 不含权重。可以从 Hugging Face 下载 GGUF，也可以直接引用 NuGet 权重包：
 
-| 量化 | Hugging Face |
-| --- | --- |
-| 1.25-bit STQ1_0 | [Hy-MT2-1.8B-1.25Bit-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-1.25Bit-GGUF) |
-| Q2_0C | [Hy-MT2-1.8B-2Bit-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-2Bit-GGUF) |
-| Q8_0 | [Hy-MT2-1.8B-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF) |
-| Q6_K | [Hy-MT2-1.8B-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF) |
-| Q4_K_M | [Hy-MT2-1.8B-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF) |
+| 量化 | Hugging Face | NuGet 权重包 | 分片数 | 总大小 |
+| --- | --- | --- | --- | --- |
+| 1.25-bit STQ1_0 | [Hy-MT2-1.8B-1.25Bit-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-1.25Bit-GGUF) | [Sdcb.GgufWeights.Hy-MT2-1.8B-1.25Bit](https://www.nuget.org/packages/Sdcb.GgufWeights.Hy-MT2-1.8B-1.25Bit) | 2 | 约 440 MB |
+| Q2_0C | [Hy-MT2-1.8B-2Bit-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-2Bit-GGUF) | [Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit](https://www.nuget.org/packages/Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit) | 3 | 约 573 MB |
+| Q4_K_M | [Hy-MT2-1.8B-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF) | [Sdcb.GgufWeights.Hy-MT2-1.8B-Q4_K_M](https://www.nuget.org/packages/Sdcb.GgufWeights.Hy-MT2-1.8B-Q4_K_M) | 5 | 约 1.1 GB |
+| Q6_K | [Hy-MT2-1.8B-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF) | [Sdcb.GgufWeights.Hy-MT2-1.8B-Q6_K](https://www.nuget.org/packages/Sdcb.GgufWeights.Hy-MT2-1.8B-Q6_K) | 7 | 约 1.4 GB |
+| Q8_0 | [Hy-MT2-1.8B-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF) | [Sdcb.GgufWeights.Hy-MT2-1.8B-Q8_0](https://www.nuget.org/packages/Sdcb.GgufWeights.Hy-MT2-1.8B-Q8_0) | 8 | 约 1.8 GB |
+
+只需引用表中的顶层包，其余分片包（`.Part2`…）会作为依赖自动还原，分片数含顶层包本身；总大小即该模型 GGUF 的大小，也是输出目录多出的体积。包很大，首次还原可能会比较慢（2Bit 约 573 MB，本机用时约 7.5 分钟）。加载方式：`new HunyuanDenseModel(Sdcb.GgufWeights.Hy_MT2_1_8B_2Bit.Weights.Model())`。
 
 ## 快速开始
 

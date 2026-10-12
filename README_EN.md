@@ -8,15 +8,17 @@ Validated GGUF quantizations: **Q8_0**, **Q6_K**, **Q4_K_M**, **Q2_0C**, and **1
 
 ## Models
 
-Weights are not shipped in the NuGet packages. Download a GGUF yourself:
+The `Sdcb.HyMT2Sharp` inference package ships no weights. Download a GGUF from Hugging Face, or reference a NuGet weight package:
 
-| Quant | Hugging Face |
-| --- | --- |
-| 1.25-bit STQ1_0 | [Hy-MT2-1.8B-1.25Bit-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-1.25Bit-GGUF) |
-| Q2_0C | [Hy-MT2-1.8B-2Bit-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-2Bit-GGUF) |
-| Q8_0 | [Hy-MT2-1.8B-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF) |
-| Q6_K | [Hy-MT2-1.8B-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF) |
-| Q4_K_M | [Hy-MT2-1.8B-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF) |
+| Quant | Hugging Face | NuGet weight package | Parts | Total size |
+| --- | --- | --- | --- | --- |
+| 1.25-bit STQ1_0 | [Hy-MT2-1.8B-1.25Bit-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-1.25Bit-GGUF) | [Sdcb.GgufWeights.Hy-MT2-1.8B-1.25Bit](https://www.nuget.org/packages/Sdcb.GgufWeights.Hy-MT2-1.8B-1.25Bit) | 2 | ~440 MB |
+| Q2_0C | [Hy-MT2-1.8B-2Bit-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-2Bit-GGUF) | [Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit](https://www.nuget.org/packages/Sdcb.GgufWeights.Hy-MT2-1.8B-2Bit) | 3 | ~573 MB |
+| Q4_K_M | [Hy-MT2-1.8B-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF) | [Sdcb.GgufWeights.Hy-MT2-1.8B-Q4_K_M](https://www.nuget.org/packages/Sdcb.GgufWeights.Hy-MT2-1.8B-Q4_K_M) | 5 | ~1.1 GB |
+| Q6_K | [Hy-MT2-1.8B-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF) | [Sdcb.GgufWeights.Hy-MT2-1.8B-Q6_K](https://www.nuget.org/packages/Sdcb.GgufWeights.Hy-MT2-1.8B-Q6_K) | 7 | ~1.4 GB |
+| Q8_0 | [Hy-MT2-1.8B-GGUF](https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF) | [Sdcb.GgufWeights.Hy-MT2-1.8B-Q8_0](https://www.nuget.org/packages/Sdcb.GgufWeights.Hy-MT2-1.8B-Q8_0) | 8 | ~1.8 GB |
+
+Reference only the top-level package; its remaining part packages (`.Part2`…) restore as dependencies, and the part count includes the top-level package. The total size equals the model's GGUF size and is also what lands in your output folder. These packages are large, so the first restore can be slow (2Bit is ~573 MB and took ~7.5 minutes here). Load with `new HunyuanDenseModel(Sdcb.GgufWeights.Hy_MT2_1_8B_2Bit.Weights.Model())`.
 
 ## Quick start
 
