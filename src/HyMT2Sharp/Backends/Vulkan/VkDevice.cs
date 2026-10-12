@@ -32,6 +32,12 @@ internal unsafe sealed class VkDevice : IDisposable
     public double TimestampPeriodNs = 1;
     private IntPtr _commandPool;
     private IntPtr _descPool;
+    // Everything created through this device, released in Dispose. Destroying the
+    // VkDevice alone does not return VRAM on every driver (NVIDIA keeps it).
+    private readonly HashSet<VkBuffer> _buffers = [];
+    private readonly List<VkPipeline> _pipelines = [];
+    private readonly List<IntPtr> _shaderModules = [];
+    private readonly HashSet<IntPtr> _fences = [];
 
     public static VkDevice Create(uint deviceIndex = 0)
     {
@@ -287,7 +293,7 @@ internal unsafe sealed class VkDevice : IDisposable
     /// CPU reads (uncached WC reads from VRAM are ~15MB/s, catastrophic).</summary>
     public VkBuffer NewStorageBuffer(ulong bytes, bool hostVisible, bool preferHost = false)
     {
-        var b = new VkBuffer { Dev = Device, Size = bytes };
+        var b = new VkBuffer { Dev = Device, Size = bytes, Owner = this };
         Vk.VkBufferCreateInfo bci = new()
         {
             SType = VkConst.StBufferCreateInfo,
@@ -296,6 +302,7 @@ internal unsafe sealed class VkDevice : IDisposable
             SharingMode = VkConst.SharingExclusive,
         };
         Vk.Check(Vk.vkCreateBuffer(Device, &bci, null, out b.Buffer), "vkCreateBuffer");
+        _buffers.Add(b);
         Vk.VkMemoryRequirements req;
         Vk.vkGetBufferMemoryRequirements(Device, b.Buffer, &req);
 
@@ -356,6 +363,7 @@ internal unsafe sealed class VkDevice : IDisposable
                 CodeSize = (nuint)spirv.Length, PCode = (uint*)p,
             };
             Vk.Check(Vk.vkCreateShaderModule(Device, &ci, null, out IntPtr m), "vkCreateShaderModule");
+            _shaderModules.Add(m);
             return m;
         }
     }
@@ -413,7 +421,9 @@ internal unsafe sealed class VkDevice : IDisposable
         };
         IntPtr pipeline;
         Vk.Check(Vk.vkCreateComputePipelines(Device, IntPtr.Zero, 1, &cpci, null, &pipeline), "vkCreateComputePipelines");
-        return new VkPipeline { Pipeline = pipeline, Layout = layout, SetLayout = setLayout };
+        VkPipeline p = new() { Pipeline = pipeline, Layout = layout, SetLayout = setLayout };
+        _pipelines.Add(p);
+        return p;
     }
 
     public IntPtr NewDescriptorSet(IntPtr setLayout)
@@ -523,6 +533,7 @@ internal unsafe sealed class VkDevice : IDisposable
             Vk.Check(Vk.vkEndCommandBuffer(cmd), "vkEndCommandBuffer");
             Submit(cmd, fence);
             WaitFence(fence);
+            DestroyFence(fence);
         }
         finally
         {
@@ -557,8 +568,17 @@ internal unsafe sealed class VkDevice : IDisposable
     {
         Vk.VkFenceCreateInfo ci = new() { SType = VkConst.StFenceCreateInfo, Flags = signaled ? 1u : 0u };
         Vk.Check(Vk.vkCreateFence(Device, &ci, null, out IntPtr f), "vkCreateFence");
+        _fences.Add(f);
         return f;
     }
+
+    public void DestroyFence(IntPtr fence)
+    {
+        if (_fences.Remove(fence))
+            Vk.vkDestroyFence(Device, fence, null);
+    }
+
+    internal void Forget(VkBuffer buffer) => _buffers.Remove(buffer);
 
     public void Submit(IntPtr cmd, IntPtr fence)
     {
@@ -577,7 +597,30 @@ internal unsafe sealed class VkDevice : IDisposable
 
     public void Dispose()
     {
-        if (Device != IntPtr.Zero) { Vk.vkDeviceWaitIdle(Device); Vk.vkDestroyDevice(Device, null); Device = IntPtr.Zero; }
+        if (Device != IntPtr.Zero)
+        {
+            Vk.vkDeviceWaitIdle(Device);
+            foreach (VkBuffer b in _buffers.ToArray())
+                b.Destroy();
+            foreach (VkPipeline p in _pipelines)
+            {
+                Vk.vkDestroyPipeline(Device, p.Pipeline, null);
+                Vk.vkDestroyPipelineLayout(Device, p.Layout, null);
+                Vk.vkDestroyDescriptorSetLayout(Device, p.SetLayout, null);
+            }
+            _pipelines.Clear();
+            foreach (IntPtr m in _shaderModules)
+                Vk.vkDestroyShaderModule(Device, m, null);
+            _shaderModules.Clear();
+            foreach (IntPtr f in _fences)
+                Vk.vkDestroyFence(Device, f, null);
+            _fences.Clear();
+            if (_descPool != IntPtr.Zero) { Vk.vkDestroyDescriptorPool(Device, _descPool, null); _descPool = IntPtr.Zero; }
+            // Frees every command buffer allocated from it.
+            if (_commandPool != IntPtr.Zero) { Vk.vkDestroyCommandPool(Device, _commandPool, null); _commandPool = IntPtr.Zero; }
+            Vk.vkDestroyDevice(Device, null);
+            Device = IntPtr.Zero;
+        }
         if (Instance != IntPtr.Zero) { Vk.vkDestroyInstance(Instance, null); Instance = IntPtr.Zero; }
     }
 }
@@ -591,6 +634,7 @@ internal sealed class VkPipeline
 internal unsafe sealed class VkBuffer
 {
     public IntPtr Dev, Buffer, Memory;
+    public VkDevice? Owner;
     public ulong Size;
     public uint Flags;
 
@@ -616,6 +660,8 @@ internal unsafe sealed class VkBuffer
             Vk.vkFreeMemory(Dev, Memory, null);
             Memory = IntPtr.Zero;
         }
+        Owner?.Forget(this);
+        Owner = null;
     }
 
     public void Flush(ulong offset, ulong size)

@@ -676,11 +676,7 @@ public sealed unsafe class VulkanBackend : IComputeBackend
         Vk.Check(Vk.vkEndCommandBuffer(cmd), "vkEndCommandBuffer");
         _dev.Submit(cmd, fence);
         _dev.WaitFence(fence);
-        if (guTmp != null)
-        {
-            Vk.vkDestroyBuffer(_dev.Device, guTmp.Buffer, null);
-            Vk.vkFreeMemory(_dev.Device, guTmp.Memory, null);
-        }
+        guTmp?.Destroy();
     }
 
     private void RecordPrefill(int seq, int pos)
@@ -1159,5 +1155,15 @@ public sealed unsafe class VulkanBackend : IComputeBackend
         return b;
     }
 
-    public void Dispose() => _dev.Dispose();
+    public void Dispose()
+    {
+        if (_dev.Device != IntPtr.Zero)
+        {
+            Vk.vkDeviceWaitIdle(_dev.Device);
+            if (_qpool != IntPtr.Zero) { Vk.vkDestroyQueryPool(_dev.Device, _qpool, null); _qpool = IntPtr.Zero; }
+            if (_pfProfPool != IntPtr.Zero) { Vk.vkDestroyQueryPool(_dev.Device, _pfProfPool, null); _pfProfPool = IntPtr.Zero; }
+        }
+        // VkDevice owns every buffer, pipeline, shader module and fence it created.
+        _dev.Dispose();
+    }
 }

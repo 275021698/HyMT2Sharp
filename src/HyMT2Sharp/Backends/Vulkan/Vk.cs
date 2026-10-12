@@ -372,6 +372,11 @@ internal static unsafe partial class Vk
     [LibraryImport(LibName)] public static partial VkResult vkCreatePipelineLayout(IntPtr device, VkPipelineLayoutCreateInfo* ci, void* alloc, out IntPtr layout);
     [LibraryImport(LibName)] public static partial VkResult vkCreateComputePipelines(IntPtr device, IntPtr cache, uint count, VkComputePipelineCreateInfo* ci, void* alloc, IntPtr* pipelines);
     [LibraryImport(LibName)] public static partial void vkDestroyPipeline(IntPtr device, IntPtr pipeline, void* alloc);
+    [LibraryImport(LibName)] public static partial void vkDestroyPipelineLayout(IntPtr device, IntPtr layout, void* alloc);
+    [LibraryImport(LibName)] public static partial void vkDestroyDescriptorSetLayout(IntPtr device, IntPtr setLayout, void* alloc);
+    [LibraryImport(LibName)] public static partial void vkDestroyDescriptorPool(IntPtr device, IntPtr pool, void* alloc);
+    [LibraryImport(LibName)] public static partial void vkDestroyCommandPool(IntPtr device, IntPtr pool, void* alloc);
+    [LibraryImport(LibName)] public static partial void vkDestroyFence(IntPtr device, IntPtr fence, void* alloc);
 
     [LibraryImport(LibName)] public static partial VkResult vkCreateDescriptorSetLayout(IntPtr device, VkDescriptorSetLayoutCreateInfo* ci, void* alloc, out IntPtr setLayout);
     [LibraryImport(LibName)] public static partial VkResult vkCreateDescriptorPool(IntPtr device, VkDescriptorPoolCreateInfo* ci, void* alloc, out IntPtr pool);
