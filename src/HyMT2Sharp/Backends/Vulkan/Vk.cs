@@ -92,7 +92,7 @@ internal static unsafe partial class Vk
     [StructLayout(LayoutKind.Sequential)]
     public struct VkMemoryType { public uint PropertyFlags; public uint HeapIndex; }
 
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Sequential, Size = 16)]
     public struct VkMemoryHeap { public ulong Size; public uint Flags; }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -109,9 +109,8 @@ internal static unsafe partial class Vk
         }
         public VkMemoryHeap HeapAt(int i)
         {
-            fixed (byte* p = MemoryHeaps) return ((VkMemoryHeapNative*)p)[i].ToManaged();
+            fixed (byte* p = MemoryHeaps) return ((VkMemoryHeap*)p)[i];
         }
-        private struct VkMemoryHeapNative { public ulong Size; public uint Flags; public uint Pad; public VkMemoryHeap ToManaged() => new() { Size = Size, Flags = Flags }; }
     }
 
     [StructLayout(LayoutKind.Sequential)]

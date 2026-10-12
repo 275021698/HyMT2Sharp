@@ -9,4 +9,8 @@
     <None Remove="Backends\Vulkan\Shaders\*.comp" />
     <None Remove="Backends\Vulkan\Shaders\*.spv" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Sdcb.HyMT2Sharp.Tests" />
+  </ItemGroup>
 </Project>
